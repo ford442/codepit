@@ -19,7 +19,7 @@ mkdir -p "${PROJECTS_DIR}"
 if [ ! -d "/opt/emsdk" ]; then
   echo -e "${BLUE}📦 Installing Emscripten SDK...${NC}"
   sudo mkdir -p /opt/emsdk
-  sudo chown -R $(whoami):$(whoami) /opt/emsdk
+  sudo chown -R $(whoami):$(id -gn) /opt/emsdk
   cd /opt/emsdk
   git clone --depth 1 https://github.com/emscripten-core/emsdk.git .
   ./emsdk install latest

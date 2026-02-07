@@ -126,8 +126,10 @@ initial_setup() {
     echo "=========================="
     echo ""
     
-    # Load environment variables from .env file
+    # Load or fetch environment variables
     local ENV_FILE="${WORKSPACE_ROOT:-$(dirname "$0")}/.env"
+    local ENV_REMOTE_FILE="${WORKSPACE_ROOT:-$(dirname "$0")}/.env.remote"
+    
     if [ -f "$ENV_FILE" ]; then
         echo -e "${BLUE}🔐 Loading API keys from .env...${NC}"
         set -a
@@ -135,6 +137,18 @@ initial_setup() {
         set +a
         echo -e "${GREEN}✅ Environment loaded${NC}"
         echo ""
+    elif [ -f "$ENV_REMOTE_FILE" ]; then
+        # Check if remote URL is configured
+        local remote_url=$(grep -E '^URL=' "$ENV_REMOTE_FILE" 2>/dev/null | cut -d'=' -f2- | tr -d '"' | tr -d "'" | head -1)
+        if [ -n "$remote_url" ]; then
+            echo -e "${BLUE}🔐 Fetching secrets from remote...${NC}"
+            if [ -f "${WORKSPACE_ROOT:-$(dirname "$0")}/fetch-secrets.sh" ]; then
+                bash "${WORKSPACE_ROOT:-$(dirname "$0")}/fetch-secrets.sh" "$remote_url"
+                echo ""
+            else
+                echo -e "${YELLOW}⚠️  fetch-secrets.sh not found${NC}"
+            fi
+        fi
     fi
     
     # Initialize projects directory

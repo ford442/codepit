@@ -1,0 +1,11 @@
+name: Codespaces Prebuilds
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 0 * * 1'
+jobs:
+  prebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4

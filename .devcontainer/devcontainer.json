@@ -24,13 +24,43 @@
         "ms-python.python",
         "dbaeumer.vscode-eslint",
         "GitHub.copilot",
-        "GitHub.copilot-chat"
+        "GitHub.copilot-chat",
+        "rust-lang.rust-analyzer",
+        "dtsvet.vscode-wasm",
+        "raczzalan.webgl-glsl-editor",
+        "slevesque.shader",
+        "ms-vscode.hexeditor",
+        "bierner.comment-tagged-templates",
+        "formulahendry.auto-rename-tag",
+        "christian-kohler.path-intellisense",
+        "eamodio.gitlens"
       ],
       "settings": {
         "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.profiles.linux": {
+          "bash": {
+            "path": "/bin/bash",
+            "args": ["-l"]
+          }
+        },
         "files.watcherExclude": {
-          "**/projects/**": true
-        }
+          "**/projects/**": true,
+          "**/.git/objects/**": true,
+          "**/.git/subtree-cache/**": true,
+          "**/node_modules/**": true,
+          "**/build/**": true,
+          "**/dist/**": true
+        },
+        "search.exclude": {
+          "**/projects/**": false,
+          "**/node_modules": true,
+          "**/build": true,
+          "**/dist": true,
+          "**/*.wasm": true
+        },
+        "editor.formatOnSave": true,
+        "git.ignoreMissingGitWarning": true,
+        "workbench.startupEditor": "none"
       }
     }
   },

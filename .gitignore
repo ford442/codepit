@@ -42,3 +42,7 @@ Thumbs.db
 /tmp/
 *.tmp
 *.log
+
+# Environment variables (API keys)
+.env
+.env.local

@@ -173,7 +173,7 @@ initial_setup() {
         ./emsdk activate latest
         echo -e "${GREEN}✅ Emscripten SDK installed${NC}"
     else
-        echo -e "${GREEN}✅ Emscripten SDK already installed (skipping Docker-baked setup)${NC}"
+        echo -e "${GREEN}✅ Emscripten SDK already installed${NC}"
     fi
     
     # Source Emscripten environment

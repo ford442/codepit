@@ -15,6 +15,8 @@ Cockpit is a fully-configured development environment optimized for:
 ### 🛠️ Development Tools
 - **Node.js** (LTS) - JavaScript runtime
 - **Python 3.11** - Scripting and AI tools
+- **Aider** - AI-powered pair programming
+- **Kimi** - AI-powered CLI tool
 - **Emscripten** - C/C++ to WebAssembly compiler
 - **Desktop Environment** - VNC access on port 6080
 

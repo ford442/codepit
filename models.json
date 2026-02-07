@@ -1,0 +1,90 @@
+{
+  "providers": {
+    "xai": {
+      "name": "X.AI (Grok)",
+      "api_base": "https://api.x.ai/v1",
+      "env_key": "XAI_API_KEY",
+      "default_model": "grok-beta",
+      "models": ["grok-beta", "grok-2", "grok-2-mini"],
+      "capabilities": ["chat", "code", "reasoning"],
+      "max_tokens": 4096,
+      "temperature": 0.7
+    },
+    "kimi": {
+      "name": "Moonshot (Kimi)",
+      "api_base": "https://api.moonshot.cn/v1",
+      "env_key": "MOONSHOT_API_KEY",
+      "default_model": "moonshot-v1-8k",
+      "models": ["moonshot-v1-8k", "moonshot-v1-32k", "moonshot-v1-128k"],
+      "capabilities": ["chat", "code", "long-context"],
+      "max_tokens": 4096,
+      "temperature": 0.3
+    },
+    "openai": {
+      "name": "OpenAI",
+      "api_base": "https://api.openai.com/v1",
+      "env_key": "OPENAI_API_KEY",
+      "default_model": "gpt-4o",
+      "models": ["gpt-4o", "gpt-4o-mini", "o1", "o1-mini"],
+      "capabilities": ["chat", "code", "reasoning", "vision"],
+      "max_tokens": 4096,
+      "temperature": 0.7
+    },
+    "anthropic": {
+      "name": "Anthropic (Claude)",
+      "api_base": "https://api.anthropic.com/v1",
+      "env_key": "ANTHROPIC_API_KEY",
+      "default_model": "claude-sonnet-4-20250514",
+      "models": ["claude-sonnet-4-20250514", "claude-3-5-haiku-20241022"],
+      "capabilities": ["chat", "code", "reasoning", "long-context"],
+      "max_tokens": 4096,
+      "temperature": 0.7
+    }
+  },
+  "roles": {
+    "architect": {
+      "description": "High-level system design and architecture decisions",
+      "system_prompt": "You are an expert software architect. Provide high-level design guidance, identify patterns, and suggest architecture improvements. Be concise and actionable.",
+      "preferred_providers": ["xai", "openai"]
+    },
+    "coder": {
+      "description": "Implementation, debugging, and code generation",
+      "system_prompt": "You are an expert programmer specializing in WebAssembly, WebGPU, and audio processing. Write clean, efficient, well-documented code optimized for 2-core systems.",
+      "preferred_providers": ["kimi", "openai"]
+    },
+    "reviewer": {
+      "description": "Code review, quality assurance, and best practices",
+      "system_prompt": "You are a thorough code reviewer. Analyze code for bugs, security issues, performance problems, and adherence to best practices. Be specific and constructive.",
+      "preferred_providers": ["xai", "anthropic"]
+    },
+    "researcher": {
+      "description": "Information gathering, documentation, and analysis",
+      "system_prompt": "You are a technical researcher. Provide accurate, well-sourced information about technologies, APIs, and best practices. Focus on practical applicability.",
+      "preferred_providers": ["kimi", "xai"]
+    }
+  },
+  "pipelines": {
+    "code-review": {
+      "description": "Generate code then review it",
+      "steps": [
+        { "role": "coder", "action": "Generate or modify code based on the request" },
+        { "role": "reviewer", "action": "Review the generated code for issues" }
+      ]
+    },
+    "design-implement": {
+      "description": "Design architecture then implement",
+      "steps": [
+        { "role": "architect", "action": "Design the approach and architecture" },
+        { "role": "coder", "action": "Implement the designed solution" }
+      ]
+    },
+    "research-implement-review": {
+      "description": "Research, implement, then review",
+      "steps": [
+        { "role": "researcher", "action": "Research the topic and gather requirements" },
+        { "role": "coder", "action": "Implement based on research findings" },
+        { "role": "reviewer", "action": "Review the implementation" }
+      ]
+    }
+  }
+}

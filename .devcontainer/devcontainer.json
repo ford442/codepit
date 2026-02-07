@@ -46,8 +46,6 @@
     "--cpus=2",
     "--memory=4g"
   ],
-  // Mount projects directory: initializeCommand creates it locally first,
-  // then it's mounted into the container, and postCreateCommand populates it
   "mounts": [
     "source=${localWorkspaceFolder}/projects,target=${containerWorkspaceFolder}/projects,type=bind,consistency=cached"
   ],

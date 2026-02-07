@@ -20,6 +20,14 @@ Cockpit is a fully-configured development environment optimized for:
 - **Emscripten** - C/C++ to WebAssembly compiler
 - **Desktop Environment** - VNC access on port 6080
 
+### 🤖 Multi-Model AI Orchestration
+- **Providers**: X.AI (Grok), Moonshot (Kimi), OpenAI, Anthropic (Claude)
+- **Roles**: architect, coder, reviewer, researcher — auto-routed to best provider
+- **Chain**: Sequential model refinement (model A → model B improves answer)
+- **Consensus**: Multi-model voting with synthesized output
+- **Delegate**: Role-based routing to the best provider
+- **Pipeline**: Named multi-step workflows (e.g., research → implement → review)
+
 ### 🎯 Optimizations
 - **2-Core CPU** efficiency with resource limits
 - **AI-Optimized** codebase structure for GitHub Copilot
@@ -38,6 +46,7 @@ codepit/
 │   ├── wasm-audio/         # WASM audio processor
 │   └── sandbox/            # Experimental playground
 ├── cockpit.code-workspace  # VS Code workspace config
+├── models.json             # AI provider, role & pipeline definitions
 ├── setup.sh                # Setup script (runs automatically)
 └── README.md               # This file
 ```
@@ -89,7 +98,43 @@ The environment includes a Senior Creative Engineer persona that:
 - Writes AI-friendly, well-documented code
 - Balances performance with maintainability
 
+### AI CLI & Multi-Model Orchestration
+The `ai-cli.sh` script provides unified access to multiple AI providers and orchestration patterns:
+
+```bash
+# Single model queries
+./ai-cli.sh xai "Explain WebGPU compute shaders"
+./ai-cli.sh kimi "Optimize this Rust code"
+./ai-cli.sh openai "Design a shader pipeline"
+./ai-cli.sh anthropic "Review this C++ module"
+
+# Chain: First model answers, second refines
+./ai-cli.sh chain "Best approach for real-time audio in WASM?"
+
+# Consensus: Ask all configured models, synthesize the best answer
+./ai-cli.sh consensus "Should I use WebGPU or WebGL for particle effects?"
+
+# Delegate: Route to the best provider for a specific role
+./ai-cli.sh delegate coder "Write a WGSL vertex shader"
+./ai-cli.sh delegate reviewer "Check this function for memory leaks"
+
+# Pipeline: Run named multi-step workflows
+./ai-cli.sh pipeline code-review "Add error handling to fetch calls"
+./ai-cli.sh pipeline design-implement "Real-time audio visualizer"
+
+# Management
+./ai-cli.sh test        # Test all API connections
+./ai-cli.sh models      # List available models
+./ai-cli.sh roles       # List available roles
+./ai-cli.sh pipelines   # List available pipelines
+```
+
+Providers, roles, and pipelines are configured in `models.json`. Add your API keys to `.env` (see `.env.example`).
+
 ## Configuration Files
+
+### `models.json`
+Defines AI providers, roles (with system prompts and preferred providers), and named pipelines for multi-step orchestration.
 
 ### `.devcontainer/devcontainer.json`
 Configures the development container with all necessary tools and features.

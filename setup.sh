@@ -206,6 +206,12 @@ initial_setup() {
     if command -v pip &> /dev/null; then
         pip install --upgrade pip --quiet
         echo -e "${GREEN}✅ pip updated${NC}"
+
+        echo -e "${BLUE}📦 Installing aider and kimi...${NC}"
+        python3 -m pip install aider-install --quiet
+        aider-install
+        curl -LsSf https://code.kimi.com/install.sh | bash
+        echo -e "${GREEN}✅ aider and kimi installed${NC}"
     fi
     
     # Make .env auto-load in shell profile

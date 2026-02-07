@@ -1,6 +1,8 @@
 {
   "name": "Cockpit Codespace",
-  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
   "features": {
     "ghcr.io/devcontainers/features/node:1": {
       "version": "lts",
@@ -33,7 +35,9 @@
         "bierner.comment-tagged-templates",
         "formulahendry.auto-rename-tag",
         "christian-kohler.path-intellisense",
-        "eamodio.gitlens"
+        "eamodio.gitlens",
+        "ms-vscode.wasm-wasi-core",
+        "ziglang.vscode-zig"
       ],
       "settings": {
         "terminal.integrated.defaultProfile.linux": "bash",
@@ -64,20 +68,21 @@
       }
     }
   },
-  "postCreateCommand": "bash setup.sh",
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y jq cmake && bash setup.sh",
+  "postStartCommand": "source /opt/emsdk/emsdk_env.sh 2>/dev/null || true",
+  "postAttachCommand": "echo '🚀 Cockpit ready! Run ./dev.sh help for commands.'",
   "remoteUser": "vscode",
   "containerEnv": {
-    "EMSDK": "/opt/emsdk",
-    "EM_CONFIG": "/opt/emsdk/.emscripten",
-    "EM_CACHE": "/opt/emsdk/.emscripten_cache",
     "WORKSPACE_ROOT": "${containerWorkspaceFolder}"
   },
-  "runArgs": [
-    "--cpus=2",
-    "--memory=4g"
-  ],
-  "mounts": [
-    "source=${localWorkspaceFolder}/projects,target=${containerWorkspaceFolder}/projects,type=bind,consistency=cached"
-  ],
-  "initializeCommand": "mkdir -p ${localWorkspaceFolder}/projects"
+  "hostRequirements": {
+    "cpus": 2,
+    "memory": "4gb"
+  },
+  "forwardPorts": [3000, 6080, 8080],
+  "portsAttributes": {
+    "3000": { "label": "Dev Server", "onAutoForward": "notify" },
+    "6080": { "label": "Desktop VNC", "onAutoForward": "openBrowser" },
+    "8080": { "label": "Alt Dev Server", "onAutoForward": "notify" }
+  }
 }

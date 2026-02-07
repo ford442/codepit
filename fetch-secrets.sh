@@ -93,7 +93,7 @@ if [ -f "$TARGET_FILE" ]; then
         echo -e "${GREEN}✅ Valid .env file downloaded${NC}"
         
         # Count keys
-        local key_count=$(grep -c "=" "$TARGET_FILE" 2>/dev/null || echo "0")
+        key_count=$(grep -c "=" "$TARGET_FILE" 2>/dev/null || echo "0")
         echo -e "  Found ${CYAN}$key_count${NC} environment variables"
         
         # Load the environment

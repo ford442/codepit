@@ -1,0 +1,53 @@
+{
+  "name": "Cockpit Codespace",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "lts",
+      "nodeGypDependencies": true
+    },
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.11",
+      "installTools": true
+    },
+    "ghcr.io/devcontainers/features/desktop-lite:1": {
+      "password": "codespace",
+      "webPort": "6080",
+      "vncPort": "5901"
+    },
+    "ghcr.io/devcontainers/features/git:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools",
+        "ms-python.python",
+        "dbaeumer.vscode-eslint",
+        "GitHub.copilot",
+        "GitHub.copilot-chat"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "files.watcherExclude": {
+          "**/projects/**": true
+        }
+      }
+    }
+  },
+  "postCreateCommand": "bash setup.sh",
+  "remoteUser": "vscode",
+  "containerEnv": {
+    "EMSDK": "/opt/emsdk",
+    "EM_CONFIG": "/opt/emsdk/.emscripten",
+    "EM_CACHE": "/opt/emsdk/.emscripten_cache",
+    "WORKSPACE_ROOT": "${containerWorkspaceFolder}"
+  },
+  "runArgs": [
+    "--cpus=2",
+    "--memory=4g"
+  ],
+  "mounts": [
+    "source=${localWorkspaceFolder}/projects,target=${containerWorkspaceFolder}/projects,type=bind,consistency=cached"
+  ],
+  "initializeCommand": "mkdir -p ${localWorkspaceFolder}/projects"
+}

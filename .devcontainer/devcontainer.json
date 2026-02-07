@@ -18,6 +18,13 @@
     "ghcr.io/devcontainers/features/git:1": {}
   },
   "customizations": {
+    "codespaces": {
+        "repositories": {
+            "ford442/*": {
+                "permissions": "write-all"
+            }
+        }
+    },
     "vscode": {
       "extensions": [
         "ms-vscode.cpptools",

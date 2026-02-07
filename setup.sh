@@ -70,7 +70,8 @@ clone_repo() {
     
     if [ -n "$build_cmd" ] && [ "$build_cmd" != "null" ]; then
         echo -e "${BLUE}📦 Installing dependencies...${NC}"
-        eval "$build_cmd" || echo -e "${YELLOW}⚠️  Build command failed, you may need to run it manually${NC}"
+        (cd "$target_dir" && bash -c "$build_cmd") || \
+            echo -e "${YELLOW}⚠️  Build command failed, you may need to run it manually${NC}"
     fi
     
     echo -e "${GREEN}✅ ${repo_name} ready!${NC}"
@@ -125,6 +126,12 @@ initial_setup() {
     echo "🚀 Cockpit Codespace Setup"
     echo "=========================="
     echo ""
+    
+    # Install jq if not present
+    if ! command -v jq &> /dev/null; then
+        echo -e "${YELLOW}📦 Installing jq...${NC}"
+        sudo apt-get update && sudo apt-get install -y jq
+    fi
     
     # Load or fetch environment variables
     local ENV_FILE="${WORKSPACE_ROOT:-$(dirname "$0")}/.env"

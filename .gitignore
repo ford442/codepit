@@ -1,5 +1,6 @@
 # Projects directory (user-created content)
-/projects/
+projects/**/*
+!projects/.gitkeep
 
 # Node modules
 node_modules/

@@ -2,6 +2,16 @@
 
 Common issues and solutions when working in the Cockpit Codespace.
 
+## 📋 Recent Improvements
+
+The Cockpit Codespace has been enhanced with the following improvements:
+- **Pinned Emscripten 3.1.50**: Reproducible builds with a stable version
+- **8GB Memory**: Increased from 4GB for better WebGPU/WASM performance
+- **Stable Features**: Pinned devcontainer feature versions for consistency
+- **Vite Support**: Port 5173 forwarded by default
+- **Configurable VNC**: Password via VNC_PASSWORD environment variable
+- **Optimized Setup**: Removed redundant package installations
+
 ## 🔧 Environment Issues
 
 ### Emscripten Not Found
@@ -12,10 +22,12 @@ Common issues and solutions when working in the Cockpit Codespace.
 source /opt/emsdk/emsdk_env.sh
 ```
 
-To verify:
+To verify (should show version 3.1.50):
 ```bash
 emcc --version
 ```
+
+**Note**: The environment now uses a pinned Emscripten version (3.1.50) for reproducible builds.
 
 ### WebGPU Not Available
 **Symptom**: `navigator.gpu is undefined` or WebGPU errors
@@ -31,7 +43,10 @@ emcc --version
 
 **Solutions**:
 ```bash
-# Close other projects to free resources
+# The codespace now has 8GB memory (increased from 4GB)
+# which should handle most WebGPU and WASM workloads
+
+# If still having issues, close other projects to free resources
 ./dev.sh stop other-project
 
 # Build with fewer workers
@@ -56,6 +71,9 @@ lsof -ti:3000 | xargs kill -9
 
 # Or use different port
 npm run dev -- --port 3001
+
+# For Vite projects, port 5173 is now forwarded by default
+npm run dev  # Will use port 5173
 ```
 
 ### Dev Server Not Accessible
@@ -63,8 +81,9 @@ npm run dev -- --port 3001
 
 **Solutions**:
 1. Check port forwarding in Codespaces (Ports tab)
-2. Use port 8080 instead (always forwarded)
-3. Check firewall: `curl http://localhost:3000`
+2. For Vite projects, use port 5173 (now forwarded by default)
+3. Use port 8080 (always forwarded)
+4. Check firewall: `curl http://localhost:3000`
 
 ## 📦 Project Issues
 
@@ -237,6 +256,23 @@ uvicorn app:app --port 8001
 ```
 
 ## 🔐 Authentication Issues
+
+### VNC Desktop Password
+**Symptom**: Can't access desktop on port 6080, password rejected
+
+**Solutions**:
+```bash
+# Default password is "codespace"
+# To use a custom password, set VNC_PASSWORD environment variable:
+
+# In .env file (create if it doesn't exist)
+echo "VNC_PASSWORD=your_secure_password" >> .env
+
+# Then rebuild the container:
+# Command Palette → "Codespaces: Rebuild Container"
+```
+
+**Note**: The VNC password is now configurable via the `VNC_PASSWORD` environment variable with a fallback to "codespace".
 
 ### Git Push Fails
 **Symptom**: `Permission denied (publickey)`

@@ -56,11 +56,13 @@ jobs:
         run: |
           emcc --version
           emcmake --version
-          wasm-opt --version || echo "wasm-opt not in PATH"
+          echo "Emscripten's wasm-opt:"
+          $EMSDK/upstream/bin/wasm-opt --version || echo "Not found in EMSDK"
           
-      # Note: If wasm-opt fails with unknown flags, the build.sh flags may need
-      # to be adjusted for the specific emscripten version. The LTO flags in
-      # emscripten/build.sh (-flto -flto=thin) can cause issues with some versions.
+      # Note: The build error was caused by Emscripten's internal wasm-opt using
+      # --enable-bulk-memory-opt flag which was removed in newer binaryen versions.
+      # Pinning to 3.1.50 avoids this. The optimize.sh uses wasm-opt directly with
+      # different flags, so we need to ensure it uses the same version.
           
       # Build WASM modules in CORRECT order (not alphabetical)
       # 1. First: JC303 (self-contained)
@@ -95,6 +97,13 @@ jobs:
           echo "=== Building Rust WASM ==="
           pnpm run build:wasm:rust
           
+      - name: Setup wasm-opt (from Emscripten)
+        run: |
+          # Add Emscripten's wasm-opt to PATH for optimize.sh
+          echo "$EMSDK/upstream/bin" >> $GITHUB_PATH
+          echo "Using wasm-opt from: $EMSDK/upstream/bin"
+          $EMSDK/upstream/bin/wasm-opt --version
+        
       - name: Type check
         working-directory: ./projects/web_sequencer
         run: pnpm run tsc --noEmit

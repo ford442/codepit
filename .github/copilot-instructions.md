@@ -159,3 +159,24 @@ export class AudioProcessor {
 
 ### Workflow Examples
 See `ai-workflows/` directory for detailed templates and real session examples.
+
+## Recent Improvements (2026)
+
+### Enhanced Copilot Features
+- **Copilot Edits**: Multi-file editing with persistent context across the workspace
+- **Copilot Extensions**: Custom agents and tools for specialized workflows
+- **Inline Chat**: Contextual assistance directly in the editor
+- **Voice Input**: Natural language coding via voice commands (experimental)
+
+### Environment Enhancements
+- **Pinned Emscripten**: Version 3.1.50 for reproducible builds
+- **Increased Memory**: 8GB for better WebGPU/WASM workloads (up from 4GB)
+- **Stable Features**: Pinned devcontainer feature versions for consistency
+- **Vite Support**: Port 5173 forwarded by default for Vite dev server
+- **Configurable VNC**: Password now configurable via VNC_PASSWORD env variable
+
+### Performance Tips
+- Use GitHub Copilot's inline suggestions for rapid prototyping
+- Leverage Copilot Chat for architectural decisions and code reviews
+- Combine Copilot with ai-cli.sh for multi-model consensus on complex problems
+- Use Copilot Edits for large refactoring tasks across multiple files

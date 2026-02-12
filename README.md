@@ -17,8 +17,8 @@ Cockpit is a fully-configured development environment optimized for:
 - **Python 3.11** - Scripting and AI tools
 - **Aider** - AI-powered pair programming
 - **Kimi** - AI-powered CLI tool
-- **Emscripten** - C/C++ to WebAssembly compiler
-- **Desktop Environment** - VNC access on port 6080
+- **Emscripten 3.1.50** - C/C++ to WebAssembly compiler (pinned version)
+- **Desktop Environment** - VNC access on port 6080 (configurable password)
 
 ### 🤖 Multi-Model AI Orchestration
 - **Providers**: X.AI (Grok), Moonshot (Kimi), OpenAI, Anthropic (Claude)
@@ -30,9 +30,11 @@ Cockpit is a fully-configured development environment optimized for:
 
 ### 🎯 Optimizations
 - **2-Core CPU** efficiency with resource limits
+- **8GB Memory** allocation for WebGPU and WASM workloads
 - **AI-Optimized** codebase structure for GitHub Copilot
 - **Workspace Configuration** with root and projects mapping
 - **Git Configuration** for performance
+- **Pinned Dependencies** for reproducible builds
 
 ### 📁 Project Structure
 ```
@@ -88,7 +90,7 @@ emcc mycode.c -o mycode.wasm -O3 -s WASM=1
 
 ### Accessing Desktop Environment
 - Open browser to: http://localhost:6080
-- Password: `codespace`
+- Default password: `codespace` (configurable via VNC_PASSWORD env variable)
 - Use for GUI applications and visualization
 
 ### GitHub Copilot
@@ -163,6 +165,7 @@ Automated setup script that:
 - `EM_CONFIG` - Emscripten configuration
 - `EM_CACHE` - Emscripten cache directory
 - `WORKSPACE_ROOT` - Root workspace directory
+- `VNC_PASSWORD` - Desktop VNC password (default: "codespace")
 
 ## Tips
 
@@ -177,18 +180,43 @@ Automated setup script that:
 
 See **[TROUBLESHOOTING.md](./TROUBLESHOOTING.md)** for comprehensive troubleshooting guide.
 
-### Emscripten not found
+### Quick Fixes
+
+#### Emscripten not found
 ```bash
 source /opt/emsdk/emsdk_env.sh
+emcc --version  # Should show 3.1.50
 ```
 
-### Projects directory missing
+#### Projects directory missing
 ```bash
 bash setup.sh
 ```
 
-### Desktop not accessible
-Check that port 6080 is forwarded in your codespace settings.
+#### Desktop not accessible
+1. Check that port 6080 is forwarded in your codespace settings
+2. Verify VNC password is correct (default: "codespace")
+3. Try accessing via the Ports tab in VS Code
+
+#### Out of Memory During Build
+```bash
+# The codespace now has 8GB memory allocated
+# If still having issues, close other applications
+# or reduce optimization level:
+emcc input.cpp -o output.js -O2  # Use -O2 instead of -O3
+```
+
+#### Vite Dev Server Not Starting
+```bash
+# Port 5173 is now forwarded by default
+npm run dev
+# Check the Ports tab in VS Code to access the server
+```
+
+#### WebGPU Not Available
+- Requires Chrome 113+ or Edge 113+
+- Check `chrome://gpu` for "WebGPU: Hardware accelerated"
+- Ensure using secure context (HTTPS or localhost)
 
 ## Resources
 

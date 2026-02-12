@@ -184,6 +184,27 @@ initial_setup() {
         fi
     fi
     
+    # Install Rust if not already installed
+    if ! command -v rustc &> /dev/null; then
+        echo -e "${BLUE}🛠️ Installing Rust & Wasm-Pack...${NC}"
+        # Install Rust
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        source "$HOME/.cargo/env"
+        # Install wasm-pack (standard for Rust -> Web)
+        curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        # Add requested targets
+        rustup target add wasm32-unknown-unknown
+        rustup target add i686-unknown-linux-gnu
+        echo -e "${GREEN}✅ Rust Installed.${NC}"
+        rustc --version
+        # Add to .bashrc for future sessions
+        if ! grep -q ".cargo/env" ~/.bashrc; then
+            echo 'source $HOME/.cargo/env' >> ~/.bashrc
+        fi
+    else
+        echo -e "${GREEN}✅ Rust already installed${NC}"
+    fi
+    
     # Install jq if not present
     if ! command -v jq &> /dev/null; then
         echo -e "${BLUE}📦 Installing jq...${NC}"

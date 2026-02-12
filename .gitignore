@@ -49,3 +49,6 @@ Thumbs.db
 .env.local
 .env.remote
 .env.backup.*
+
+*.bundle
+the_jokesters-pre-cleanup-*.bundle

@@ -1,4 +1,4 @@
-name: Debug Build
+name: Debug Build (Codepit)
 
 on:
   push:
@@ -17,15 +17,21 @@ jobs:
         with:
           submodules: recursive
           
+      # Note: The web_sequencer submodule has its own debug_build.yml workflow
+      # that runs independently. This workflow is for codepit-level debugging.
+      # 
+      # For web_sequencer builds, see:
+      # projects/web_sequencer/.github/workflows/debug_build.yml
+          
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v3
         with:
-          version: 8
+          version: 9
           run_install: false
           
       - name: Get pnpm store directory
@@ -42,32 +48,31 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
             
+      # Note: web_sequencer has its own workflow. 
+      # This is just a compatibility check for the codepit parent repo.
+      - name: Check web_sequencer workflow exists
+        run: |
+          if [ -f "projects/web_sequencer/.github/workflows/debug_build.yml" ]; then
+            echo "✅ web_sequencer has its own debug_build.yml"
+            echo "For detailed builds, check the web_sequencer workflow runs"
+          fi
+          
       - name: Install dependencies (web_sequencer)
         working-directory: ./projects/web_sequencer
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
         
+      # Setup Emscripten (matching web_sequencer workflow version)
       - name: Setup Emscripten
-        uses: mymindstorm/setup-emsdk@v12
+        uses: mymindstorm/setup-emsdk@v14
         with:
-          version: '3.1.50'  # Pin to stable version (not 'latest')
-          actions-cache-folder: 'emsdk-cache'
+          version: '3.1.70'  # Matches web_sequencer workflow
+          no-cache: true
           
       - name: Verify Emscripten
         run: |
           emcc --version
-          emcmake --version
-          echo "Emscripten's wasm-opt:"
-          $EMSDK/upstream/bin/wasm-opt --version || echo "Not found in EMSDK"
           
-      # Note: The build error was caused by Emscripten's internal wasm-opt using
-      # --enable-bulk-memory-opt flag which was removed in newer binaryen versions.
-      # Pinning to 3.1.50 avoids this. The optimize.sh uses wasm-opt directly with
-      # different flags, so we need to ensure it uses the same version.
-          
-      # Build WASM modules in CORRECT order (not alphabetical)
-      # 1. First: JC303 (self-contained)
-      # 2. Then: Rubberband with patches applied
-      
+      # Build WASM modules
       - name: Build JC303 WASM
         working-directory: ./projects/web_sequencer
         run: |
@@ -76,11 +81,9 @@ jobs:
           
       - name: Build Emscripten/Rubberband WASM
         working-directory: ./projects/web_sequencer
-        continue-on-error: true  # Rubberband is optional (time-stretching feature)
+        continue-on-error: true
         run: |
           echo "=== Building Rubberband WASM ==="
-          # build.sh applies patches internally in correct order
-          # If this fails due to wasm-opt flags, the app still works without rubberband
           bash emscripten/build.sh
           
       - name: Build AssemblyScript WASM modules
@@ -92,32 +95,15 @@ jobs:
           
       - name: Build Rust WASM (optional)
         working-directory: ./projects/web_sequencer
-        continue-on-error: true  # Non-critical
+        continue-on-error: true
         run: |
           echo "=== Building Rust WASM ==="
-          # Update wasm-bindgen to ensure compatibility
           cd rust-audio && cargo update -p wasm-bindgen && cd ..
           pnpm run build:wasm:rust
           
-      - name: Setup wasm-opt (from Emscripten)
-        run: |
-          # Add Emscripten's wasm-opt to PATH for optimize.sh
-          echo "$EMSDK/upstream/bin" >> $GITHUB_PATH
-          echo "Using wasm-opt from: $EMSDK/upstream/bin"
-          $EMSDK/upstream/bin/wasm-opt --version
-        
-      - name: Type check
-        working-directory: ./projects/web_sequencer
-        run: pnpm run tsc --noEmit
-        
       - name: Build Vite app
         working-directory: ./projects/web_sequencer
         run: pnpm run build
-        
-      - name: Run tests
-        working-directory: ./projects/web_sequencer
-        run: pnpm test
-        continue-on-error: true  # Don't fail build on test issues during debug
         
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

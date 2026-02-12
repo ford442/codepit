@@ -131,6 +131,12 @@ The `ai-cli.sh` script provides unified access to multiple AI providers and orch
 
 Providers, roles, and pipelines are configured in `models.json`. Add your API keys to `.env` (see `.env.example`).
 
+## Documentation
+
+- **[AGENTS.md](./AGENTS.md)** - Complete guide for AI assistants working in this codebase
+- **[COMMANDS.md](./COMMANDS.md)** - Quick reference for all development commands
+- **[TROUBLESHOOTING.md](./TROUBLESHOOTING.md)** - Solutions for common issues
+
 ## Configuration Files
 
 ### `models.json`
@@ -161,12 +167,15 @@ Automated setup script that:
 ## Tips
 
 1. **Use the workspace file**: Open `cockpit.code-workspace` for the best experience
-2. **Keep projects modular**: Each project in `projects/` should be self-contained
-3. **Leverage WebAssembly**: Use C/C++ with Emscripten for performance-critical code
-4. **Use WebGPU**: Take advantage of GPU acceleration for graphics and compute
-5. **Write AI-friendly code**: Clear structure and documentation help Copilot assist better
+2. **Read AGENTS.md**: Start with [AGENTS.md](./AGENTS.md) for full context
+3. **Keep projects modular**: Each project in `projects/` should be self-contained
+4. **Leverage WebAssembly**: Use C/C++ with Emscripten for performance-critical code
+5. **Use WebGPU**: Take advantage of GPU acceleration for graphics and compute
+6. **Write AI-friendly code**: Clear structure and documentation help Copilot assist better
 
 ## Troubleshooting
+
+See **[TROUBLESHOOTING.md](./TROUBLESHOOTING.md)** for comprehensive troubleshooting guide.
 
 ### Emscripten not found
 ```bash

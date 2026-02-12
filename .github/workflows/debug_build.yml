@@ -1,0 +1,113 @@
+name: Debug Build
+
+on:
+  push:
+    branches: [main, debug-ci]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          run_install: false
+          
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+          
+      - name: Setup pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+            
+      - name: Install dependencies (web_sequencer)
+        working-directory: ./projects/web_sequencer
+        run: pnpm install --frozen-lockfile
+        
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v12
+        with:
+          version: 'latest'
+          actions-cache-folder: 'emsdk-cache'
+          
+      - name: Verify Emscripten
+        run: |
+          emcc --version
+          emcmake --version
+          
+      # Build WASM modules in CORRECT order (not alphabetical)
+      # 1. First: JC303 (self-contained)
+      # 2. Then: Rubberband with patches applied
+      
+      - name: Build JC303 WASM
+        working-directory: ./projects/web_sequencer
+        run: |
+          echo "=== Building JC303 WASM ==="
+          bash tools/build_jc303_omp.sh release single
+          
+      - name: Build Emscripten/Rubberband WASM
+        working-directory: ./projects/web_sequencer
+        run: |
+          echo "=== Building Rubberband WASM ==="
+          # build.sh applies patches internally in correct order
+          bash emscripten/build.sh
+          
+      - name: Build AssemblyScript WASM modules
+        working-directory: ./projects/web_sequencer
+        run: |
+          echo "=== Building AssemblyScript modules ==="
+          pnpm run build:wasm:oscillators
+          pnpm run build:wasm:freezer
+          
+      - name: Build Rust WASM (optional)
+        working-directory: ./projects/web_sequencer
+        continue-on-error: true  # Non-critical
+        run: |
+          echo "=== Building Rust WASM ==="
+          pnpm run build:wasm:rust
+          
+      - name: Type check
+        working-directory: ./projects/web_sequencer
+        run: pnpm run tsc --noEmit
+        
+      - name: Build Vite app
+        working-directory: ./projects/web_sequencer
+        run: pnpm run build
+        
+      - name: Run tests
+        working-directory: ./projects/web_sequencer
+        run: pnpm test
+        continue-on-error: true  # Don't fail build on test issues during debug
+        
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build-artifacts
+          path: |
+            projects/web_sequencer/dist/
+            projects/web_sequencer/public/*.wasm
+            projects/web_sequencer/public/*.js
+          retention-days: 7

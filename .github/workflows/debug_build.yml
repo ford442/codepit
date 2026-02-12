@@ -95,6 +95,8 @@ jobs:
         continue-on-error: true  # Non-critical
         run: |
           echo "=== Building Rust WASM ==="
+          # Update wasm-bindgen to ensure compatibility
+          cd rust-audio && cargo update -p wasm-bindgen && cd ..
           pnpm run build:wasm:rust
           
       - name: Setup wasm-opt (from Emscripten)

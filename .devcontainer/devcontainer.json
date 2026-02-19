@@ -16,8 +16,7 @@
       "password": "${localEnv:VNC_PASSWORD:codespace}",
       "webPort": "6080",
       "vncPort": "5901"
-    },
-    "ghcr.io/devcontainers/features/git:1.2.2": {}
+    }
   },
   "customizations": {
     "codespaces": {

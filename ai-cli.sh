@@ -20,9 +20,13 @@ show_help() {
     echo ""
     echo "Single Model:"
     echo "  ./ai-cli.sh xai <prompt>                 - Query X.AI (Grok)"
-    echo "  ./ai-cli.sh kimi <prompt>                - Query Moonshot (Kimi)"
+    echo "  ./ai-cli.sh kimi <prompt>                - Query Kimi (kimi-pro)"
     echo "  ./ai-cli.sh openai <prompt>              - Query OpenAI"
     echo "  ./ai-cli.sh anthropic <prompt>           - Query Anthropic (Claude)"
+    echo ""
+    echo "Kimi Shortcuts:"
+    echo "  ./ai-cli.sh --kimi <prompt>              - One-off Kimi assistant query"
+    echo "  ./ai-cli.sh --kimi-swarm <prompt>        - Kimi swarm: plan→split→work→summarize"
     echo ""
     echo "Multi-Model Orchestration:"
     echo "  ./ai-cli.sh chain <prompt>               - Sequential chain: xai → kimi refines"
@@ -36,11 +40,17 @@ show_help() {
     echo "  ./ai-cli.sh roles                        - List available roles"
     echo "  ./ai-cli.sh pipelines                    - List available pipelines"
     echo ""
-    echo "Roles:     architect, coder, reviewer, researcher"
-    echo "Pipelines: code-review, design-implement, research-implement-review"
+    echo "Roles:     architect, coder, reviewer, researcher, planner, splitter, worker, summarizer"
+    echo "Pipelines: code-review, design-implement, research-implement-review, kimi-assistant, kimi-swarm"
+    echo ""
+    echo "Environment:"
+    echo "  KIMI_API_KEY      - Kimi API key (MOONSHOT_API_KEY accepted as fallback)"
+    echo "  KIMI_DEFAULT=true - Use kimi:kimi-pro as the default single-model target"
     echo ""
     echo "Examples:"
     echo '  ./ai-cli.sh xai "Explain WebGPU compute shaders"'
+    echo '  ./ai-cli.sh --kimi "Summarise this 100k-token document"'
+    echo '  ./ai-cli.sh --kimi-swarm "Build a real-time audio visualiser"'
     echo '  ./ai-cli.sh chain "Optimize this WebAssembly module"'
     echo '  ./ai-cli.sh delegate coder "Write a WGSL vertex shader"'
     echo '  ./ai-cli.sh pipeline code-review "Add error handling to fetch calls"'
@@ -69,23 +79,22 @@ test_apis() {
     
     echo ""
     
-    if [ -n "$MOONSHOT_API_KEY" ]; then
-        echo -e "${BLUE}Testing Moonshot (Kimi)...${NC}"
+    if [ -n "$KIMI_API_KEY" ] || [ -n "$MOONSHOT_API_KEY" ]; then
+        echo -e "${BLUE}Testing Kimi...${NC}"
+        local _kimi_key="${KIMI_API_KEY:-$MOONSHOT_API_KEY}"
         local kimi_response=$(curl -s -o /dev/null -w "%{http_code}" \
             https://api.moonshot.cn/v1/models \
-            -H "Authorization: Bearer $MOONSHOT_API_KEY" \
+            -H "Authorization: Bearer $_kimi_key" \
             -H "Content-Type: application/json" 2>/dev/null || echo "000")
         
         if [ "$kimi_response" = "200" ]; then
-            echo -e "  ${GREEN}✅ Moonshot API connection successful${NC}"
+            echo -e "  ${GREEN}✅ Kimi API connection successful${NC}"
         else
-            echo -e "  ${YELLOW}⚠️  Moonshot API returned HTTP $kimi_response${NC}"
+            echo -e "  ${YELLOW}⚠️  Kimi API returned HTTP $kimi_response${NC}"
         fi
     else
-        echo -e "  ${RED}❌ MOONSHOT_API_KEY not set${NC}"
+        echo -e "  ${RED}❌ KIMI_API_KEY (or MOONSHOT_API_KEY) not set${NC}"
     fi
-
-    echo ""
 
     if [ -n "$OPENAI_API_KEY" ]; then
         echo -e "${BLUE}Testing OpenAI...${NC}"
@@ -142,15 +151,16 @@ list_models() {
     fi
     
     echo ""
-    echo -e "Moonshot (Kimi):"
-    if [ -n "$MOONSHOT_API_KEY" ]; then
+    echo -e "Kimi:"
+    local _kimi_key="${KIMI_API_KEY:-$MOONSHOT_API_KEY}"
+    if [ -n "$_kimi_key" ]; then
         curl -s https://api.moonshot.cn/v1/models \
-            -H "Authorization: Bearer $MOONSHOT_API_KEY" \
+            -H "Authorization: Bearer $_kimi_key" \
             -H "Content-Type: application/json" 2>/dev/null | \
             jq -r '.data[] | "  - \(.id): \(.owned_by)"' 2>/dev/null || \
             echo "  (Could not fetch models - check API key)"
     else
-        echo -e "  ${YELLOW}API key not configured${NC}"
+        echo -e "  ${YELLOW}API key not configured (set KIMI_API_KEY or MOONSHOT_API_KEY)${NC}"
     fi
 
     echo ""
@@ -181,13 +191,15 @@ list_models() {
 
 ## ─── Generic query helpers ───────────────────────────────────────────────────
 
-# query_provider <provider> <prompt> [system_prompt]
+# query_provider <provider> <prompt> [system_prompt] [temperature_override]
 # Unified function that queries any OpenAI-compatible provider.
 # Anthropic uses its own format and is handled separately.
+# For the kimi provider, KIMI_API_KEY is checked first; MOONSHOT_API_KEY is the fallback.
 query_provider() {
     local provider="$1"
     local prompt="$2"
     local system_prompt="${3:-You are a helpful assistant.}"
+    local temperature_override="${4:-}"
 
     if [ -z "$prompt" ]; then
         echo -e "${RED}Error: Please provide a prompt${NC}"
@@ -198,13 +210,31 @@ query_provider() {
     api_base=$(jq -r ".providers[\"$provider\"].api_base // \"\"" "$MODELS_FILE")
     model=$(jq -r ".providers[\"$provider\"].default_model // \"\"" "$MODELS_FILE")
     temperature=$(jq -r ".providers[\"$provider\"].temperature // 0.7" "$MODELS_FILE")
-    local env_key
+    local env_key env_key_fallback
     env_key=$(jq -r ".providers[\"$provider\"].env_key // \"\"" "$MODELS_FILE")
+    env_key_fallback=$(jq -r ".providers[\"$provider\"].env_key_fallback // \"\"" "$MODELS_FILE")
     api_key="${!env_key:-}"
 
+    # Use fallback env key if primary is not set (e.g. MOONSHOT_API_KEY for kimi)
+    if [ -z "$api_key" ] && [ -n "$env_key_fallback" ]; then
+        api_key="${!env_key_fallback:-}"
+    fi
+
     if [ -z "$api_key" ]; then
-        echo -e "${RED}Error: $env_key not set (required for $provider)${NC}"
+        local key_hint="$env_key"
+        [ -n "$env_key_fallback" ] && key_hint="${key_hint} (or ${env_key_fallback})"
+        echo -e "${RED}Error: $key_hint not set (required for $provider)${NC}"
         return 1
+    fi
+
+    # Apply KIMI_DEFAULT: override model when provider is kimi
+    if [ "$provider" = "kimi" ] && [ "${KIMI_DEFAULT:-false}" = "true" ]; then
+        model="kimi-pro"
+    fi
+
+    # Pipeline/caller may supply a temperature override
+    if [ -n "$temperature_override" ]; then
+        temperature="$temperature_override"
     fi
 
     if [ "$provider" = "anthropic" ]; then
@@ -266,7 +296,7 @@ query_xai() {
 }
 
 query_kimi() {
-    echo -e "${BLUE}🌙 Querying Moonshot (Kimi)...${NC}"
+    echo -e "${BLUE}🌙 Querying Kimi...${NC}"
     echo ""
     query_provider "kimi" "$*"
 }
@@ -289,9 +319,10 @@ query_anthropic() {
 get_available_providers() {
     local providers=()
     for p in $(jq -r '.providers | keys[]' "$MODELS_FILE"); do
-        local env_key
+        local env_key env_key_fallback
         env_key=$(jq -r ".providers[\"$p\"].env_key" "$MODELS_FILE")
-        if [ -n "${!env_key:-}" ]; then
+        env_key_fallback=$(jq -r ".providers[\"$p\"].env_key_fallback // \"\"" "$MODELS_FILE")
+        if [ -n "${!env_key:-}" ] || { [ -n "$env_key_fallback" ] && [ -n "${!env_key_fallback:-}" ]; }; then
             providers+=("$p")
         fi
     done
@@ -464,6 +495,9 @@ cmd_pipeline() {
     pipe_desc=$(jq -r ".pipelines[\"$pipeline_name\"].description" "$MODELS_FILE")
     local step_count
     step_count=$(jq -r ".pipelines[\"$pipeline_name\"].steps | length" "$MODELS_FILE")
+    # Optional pipeline-level temperature override
+    local pipe_temp
+    pipe_temp=$(jq -r ".pipelines[\"$pipeline_name\"].temperature // empty" "$MODELS_FILE")
 
     echo -e "${MAGENTA}🔄 Pipeline: ${pipeline_name} (${step_count} steps)${NC}"
     echo -e "${CYAN}   ${pipe_desc}${NC}"
@@ -483,9 +517,10 @@ cmd_pipeline() {
         # Pick best available provider for the role
         local provider=""
         for p in $(jq -r ".roles[\"$step_role\"].preferred_providers[]" "$MODELS_FILE"); do
-            local env_key
+            local env_key env_key_fallback
             env_key=$(jq -r ".providers[\"$p\"].env_key" "$MODELS_FILE")
-            if [ -n "${!env_key:-}" ]; then
+            env_key_fallback=$(jq -r ".providers[\"$p\"].env_key_fallback // \"\"" "$MODELS_FILE")
+            if [ -n "${!env_key:-}" ] || { [ -n "$env_key_fallback" ] && [ -n "${!env_key_fallback:-}" ]; }; then
                 provider="$p"
                 break
             fi
@@ -511,7 +546,7 @@ ${context}
 Original request: ${prompt}"
 
         local result
-        result=$(query_provider "$provider" "$step_prompt" "$system_prompt")
+        result=$(query_provider "$provider" "$step_prompt" "$system_prompt" "$pipe_temp")
         echo "$result"
         echo ""
 
@@ -551,6 +586,18 @@ case "${1:-}" in
     kimi|moonshot)
         shift
         query_kimi "$*"
+        ;;
+    --kimi)
+        shift
+        echo -e "${BLUE}🌙 Kimi assistant (kimi-pro)...${NC}"
+        echo ""
+        KIMI_DEFAULT=true cmd_pipeline "kimi-assistant" "$*"
+        ;;
+    --kimi-swarm)
+        shift
+        echo -e "${MAGENTA}🐝 Kimi swarm (kimi-pro)...${NC}"
+        echo ""
+        KIMI_DEFAULT=true cmd_pipeline "kimi-swarm" "$*"
         ;;
     openai|gpt)
         shift

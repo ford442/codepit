@@ -51,6 +51,10 @@ codepit/
 ./ai-cli.sh openai "Design a shader pipeline"
 ./ai-cli.sh anthropic "Review this C++ module"
 
+# Kimi shortcuts
+./ai-cli.sh --kimi "Summarise this large document"         # one-shot Kimi assistant
+./ai-cli.sh --kimi-swarm "Build a real-time audio visualiser"  # swarm decompose
+
 # Orchestration patterns
 ./ai-cli.sh chain "Best approach for real-time audio in WASM?"
 ./ai-cli.sh consensus "WebGPU vs WebGL for particle effects?"
@@ -58,6 +62,8 @@ codepit/
 ./ai-cli.sh delegate reviewer "Check this function for memory leaks"
 ./ai-cli.sh pipeline code-review "Add error handling to fetch calls"
 ./ai-cli.sh pipeline design-implement "Real-time audio visualizer"
+./ai-cli.sh pipeline kimi-assistant "Explain the Rubberband pitch-shift algorithm"
+./ai-cli.sh pipeline kimi-swarm "Decompose and solve the MOD player rewrite"
 
 # Management
 ./ai-cli.sh test        # Test all API connections
@@ -65,6 +71,45 @@ codepit/
 ./ai-cli.sh roles       # List available roles
 ./ai-cli.sh pipelines   # List available pipelines
 ```
+
+### Kimi Integration
+
+Kimi (`kimi-pro`) is the primary long-context model with a **200 000-token context window**, ideal for:
+
+- Summarising or reasoning over large codebases / documents
+- Multi-step swarm decomposition (`--kimi-swarm`)
+- Any task that exceeds the context limits of other providers
+
+**Setup:**
+```bash
+# Recommended: set KIMI_API_KEY in your .env
+KIMI_API_KEY=sk-...
+
+# Legacy key name also accepted as a fallback
+MOONSHOT_API_KEY=sk-...
+```
+
+**Optional: make Kimi the default model globally**
+```bash
+# In .env or shell profile
+KIMI_DEFAULT=true   # forces kimi-pro for all kimi provider calls
+```
+
+**One-off assistant query (temp 0.2 – precise):**
+```bash
+./ai-cli.sh --kimi "What are the tradeoffs of SharedArrayBuffer vs MessageChannel?"
+# equivalent to:
+./ai-cli.sh pipeline kimi-assistant "<prompt>"
+```
+
+**Swarm / decompose pattern (temp 0.3 – creative):**
+```bash
+./ai-cli.sh --kimi-swarm "Rewrite the MOD player audio engine with AudioWorklet"
+# equivalent to:
+./ai-cli.sh pipeline kimi-swarm "<prompt>"
+```
+
+The swarm pipeline runs four roles sequentially — **planner → splitter → worker → summarizer** — each using Kimi with the pipeline temperature (0.3), so the final output is a consolidated, de-duplicated answer.
 
 ## Common Patterns Across Projects
 
@@ -150,7 +195,8 @@ source /opt/emsdk/emsdk_env.sh
 ### AI CLI not working
 - Check `.env` has required API keys
 - Test with: `./ai-cli.sh test`
-- Individual provider keys: XAI_API_KEY, MOONSHOT_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY
+- Individual provider keys: XAI_API_KEY, KIMI_API_KEY (or MOONSHOT_API_KEY), OPENAI_API_KEY, ANTHROPIC_API_KEY
+- For Kimi: `KIMI_API_KEY` is checked first; `MOONSHOT_API_KEY` is the fallback
 
 ## Development Workflow
 
@@ -199,9 +245,13 @@ Required in `.env` (see `.env.example`):
 ```bash
 # AI Providers (at least one needed for ai-cli.sh)
 XAI_API_KEY=...
-MOONSHOT_API_KEY=...
+KIMI_API_KEY=...          # Kimi / Moonshot — primary key
+MOONSHOT_API_KEY=...      # Accepted as fallback if KIMI_API_KEY is unset
 OPENAI_API_KEY=...
 ANTHROPIC_API_KEY=...
+
+# Optional Kimi behaviour
+KIMI_DEFAULT=true         # Always use kimi-pro as the Kimi model
 
 # Cloud Storage (for projects using it)
 GCP_BUCKET_NAME=...

@@ -169,7 +169,7 @@ cmd_stop() {
 }
 
 cmd_status() {
-    ./setup.sh status
+    FAST_STATUS="${FAST_STATUS:-false}" ./setup.sh status
 }
 
 cmd_pull_all() {
@@ -181,18 +181,19 @@ cmd_pull_all() {
             local target_dir="${PROJECTS_DIR}/${repo}"
             if [ -d "$target_dir/.git" ]; then
                 echo -e "${CYAN}$repo:${NC}"
-                cd "$target_dir"
                 
-                local branch=$(git branch --show-current)
-                git stash push -m "auto-stash-pull" 2>/dev/null || true
+                local branch
+                branch=$(git -C "$target_dir" branch --show-current 2>/dev/null || \
+                         git -C "$target_dir" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+                git -C "$target_dir" stash push -m "auto-stash-pull" 2>/dev/null || true
                 
-                if git pull origin "$branch" 2>/dev/null; then
+                if git -C "$target_dir" pull origin "$branch" 2>/dev/null; then
                     echo -e "  ${GREEN}✅ Pulled latest${NC}"
                 else
                     echo -e "  ${YELLOW}⚠️  Could not pull${NC}"
                 fi
                 
-                git stash pop 2>/dev/null || true
+                git -C "$target_dir" stash pop 2>/dev/null || true
             fi
         done
     fi
@@ -208,10 +209,13 @@ cmd_push_all() {
         jq -r '.registry | keys[]' "$REPOS_FILE" | while read -r repo; do
             local target_dir="${PROJECTS_DIR}/${repo}"
             if [ -d "$target_dir/.git" ]; then
-                cd "$target_dir"
-                
-                local changes=$(git status --porcelain | wc -l)
-                local unpushed=$(git log origin/$(git branch --show-current)..HEAD --oneline 2>/dev/null | wc -l)
+                local branch
+                branch=$(git -C "$target_dir" branch --show-current 2>/dev/null || \
+                         git -C "$target_dir" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+                local changes
+                changes=$(git -C "$target_dir" status --porcelain 2>/dev/null | wc -l)
+                local unpushed
+                unpushed=$(git -C "$target_dir" log "origin/${branch}..HEAD" --oneline 2>/dev/null | wc -l)
                 
                 if [ "$changes" -gt 0 ] || [ "$unpushed" -gt 0 ]; then
                     echo -e "${CYAN}$repo:${NC}"
@@ -219,7 +223,7 @@ cmd_push_all() {
                     if [ "$changes" -gt 0 ]; then
                         echo -e "  ${YELLOW}⚠️  $changes uncommitted changes (skipping)${NC}"
                     elif [ "$unpushed" -gt 0 ]; then
-                        git push
+                        git -C "$target_dir" push
                         echo -e "  ${GREEN}✅ Pushed $unpushed commits${NC}"
                     fi
                 fi

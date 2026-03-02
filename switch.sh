@@ -47,14 +47,15 @@ list_projects() {
             local status=""
             
             if [ -d "$target_dir/.git" ]; then
-                cd "$target_dir"
-                local branch=$(git branch --show-current 2>/dev/null || echo "unknown")
+                local branch
+                branch=$(git -C "$target_dir" branch --show-current 2>/dev/null || echo "unknown")
                 status="${GREEN}[${branch}]${NC} cloned"
             else
                 status="${RED}[not cloned]${NC}"
             fi
             
-            local desc=$(jq -r ".registry[\"$repo\"].description // \"\"" "$REPOS_FILE")
+            local desc
+            desc=$(jq -r ".registry[\"$repo\"].description // \"\"" "$REPOS_FILE")
             printf "  %-20s %s\n" "$repo" "$desc"
             echo -e "                       $status"
         done
@@ -66,15 +67,16 @@ list_projects() {
 
 show_current() {
     if [ -f "$ACTIVE_PROJECT_FILE" ]; then
-        local current=$(cat "$ACTIVE_PROJECT_FILE")
+        local current
+        current=$(cat "$ACTIVE_PROJECT_FILE")
         echo -e "${BLUE}🔹 Current project:${NC} ${GREEN}$current${NC}"
         echo ""
         
         local target_dir="${PROJECTS_DIR}/${current}"
         if [ -d "$target_dir/.git" ]; then
-            cd "$target_dir"
-            local branch=$(git branch --show-current)
-            local changes=$(git status --porcelain | wc -l)
+            local branch changes
+            branch=$(git -C "$target_dir" branch --show-current 2>/dev/null || echo "unknown")
+            changes=$(git -C "$target_dir" status --porcelain 2>/dev/null | wc -l)
             
             echo "  Branch: $branch"
             echo "  Location: $target_dir"
@@ -125,7 +127,7 @@ switch_to() {
     echo ""
     echo -e "${GREEN}✅ Switched to ${CYAN}$repo_name${NC}"
     echo "  Location: $target_dir"
-    echo "  Branch: $(git branch --show-current)"
+    echo "  Branch: $(git -C "$target_dir" branch --show-current 2>/dev/null || echo "unknown")"
     if [ -n "$ports" ] && [ "$ports" != "null" ]; then
         echo "  Ports: $ports"
     fi

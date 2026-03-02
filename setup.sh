@@ -13,6 +13,16 @@ PROJECTS_DIR="${HOME}/projects"
 REPOS_FILE="${WORKSPACE_ROOT:-$(dirname "$0")}/repos.json"
 GITHUB_USER="ford442"
 
+# Clone behaviour flags (env-overridable)
+# FULL_CLONE=true   → deep clone with full history and tags
+# BUILD_ON_CLONE=true → run build_cmd from repos.json after cloning
+# CLONE_JOBS=N      → parallelism for clone-all (default: 4)
+# FAST_STATUS=true  → show only clone/not-cloned without git details
+FULL_CLONE="${FULL_CLONE:-false}"
+BUILD_ON_CLONE="${BUILD_ON_CLONE:-false}"
+CLONE_JOBS="${CLONE_JOBS:-4}"
+FAST_STATUS="${FAST_STATUS:-false}"
+
 show_help() {
     echo "🚀 Cockpit Codespace Setup"
     echo "=========================="
@@ -27,10 +37,16 @@ show_help() {
     echo "  status            - Show status of all cloned repos"
     echo "  help              - Show this help"
     echo ""
+    echo "Environment flags:"
+    echo "  FULL_CLONE=true       - Deep clone with full history (default: shallow)"
+    echo "  BUILD_ON_CLONE=true   - Run build_cmd after cloning (default: off)"
+    echo "  CLONE_JOBS=N          - Parallel jobs for clone-all (default: 4)"
+    echo "  FAST_STATUS=true      - Quick clone/not-cloned status only"
+    echo ""
     echo "Examples:"
     echo "  ./setup.sh clone candy_world"
-    echo "  ./setup.sh clone-all"
-    echo "  ./setup.sh status"
+    echo "  CLONE_JOBS=8 ./setup.sh clone-all"
+    echo "  FAST_STATUS=true ./setup.sh status"
 }
 
 list_repos() {
@@ -58,18 +74,20 @@ clone_repo() {
     
     if [ -d "$target_dir/.git" ]; then
         echo -e "${YELLOW}⚠️  ${repo_name} already cloned. Pulling latest...${NC}"
-        cd "$target_dir"
-        git pull origin "$default_branch"
+        git -C "$target_dir" pull origin "$default_branch"
     else
         echo -e "${BLUE}📥 Cloning ${repo_name}...${NC}"
         mkdir -p "$PROJECTS_DIR"
-        git clone "$repo_url" "$target_dir"
-        cd "$target_dir"
+        if [ "$FULL_CLONE" = "true" ]; then
+            git clone "$repo_url" "$target_dir"
+        else
+            git clone --depth 1 --no-tags "$repo_url" "$target_dir"
+        fi
         echo -e "${GREEN}✅ Cloned to ${target_dir}${NC}"
     fi
     
-    if [ -n "$build_cmd" ] && [ "$build_cmd" != "null" ]; then
-        echo -e "${BLUE}📦 Installing dependencies...${NC}"
+    if [ "$BUILD_ON_CLONE" = "true" ] && [ -n "$build_cmd" ] && [ "$build_cmd" != "null" ]; then
+        echo -e "${BLUE}📦 Running build command...${NC}"
         (cd "$target_dir" && bash -c "$build_cmd") || \
             echo -e "${YELLOW}⚠️  Build command failed, you may need to run it manually${NC}"
     fi
@@ -82,13 +100,27 @@ clone_all() {
     echo -e "${BLUE}📥 Cloning all repos...${NC}"
     echo ""
     
-    if command -v jq &> /dev/null; then
-        jq -r '.registry | keys[]' "$REPOS_FILE" | while read -r repo; do
-            clone_repo "$repo"
-        done
-    else
+    if ! command -v jq &> /dev/null; then
         echo -e "${YELLOW}⚠️  jq not found. Install jq or clone repos individually:${NC}"
         list_repos
+        return
+    fi
+
+    local repos
+    repos=$(jq -r '.registry | keys[]' "$REPOS_FILE")
+
+    local script_path
+    script_path="$(realpath "$0")"
+
+    # Parallel clone using xargs -P if CLONE_JOBS > 1, else serial
+    if [ "${CLONE_JOBS:-4}" -gt 1 ] 2>/dev/null; then
+        echo "$repos" | xargs -P "${CLONE_JOBS:-4}" -I{} bash -c \
+            "FULL_CLONE=${FULL_CLONE} BUILD_ON_CLONE=${BUILD_ON_CLONE} \"$script_path\" clone {}" 2>&1 || {
+            echo -e "${YELLOW}⚠️  Parallel clone failed, falling back to serial...${NC}"
+            echo "$repos" | while read -r repo; do clone_repo "$repo"; done
+        }
+    else
+        echo "$repos" | while read -r repo; do clone_repo "$repo"; done
     fi
 }
 
@@ -96,14 +128,23 @@ show_status() {
     echo -e "${BLUE}📊 Repo Status:${NC}"
     echo ""
     
-    if command -v jq &> /dev/null; then
-        jq -r '.registry | keys[]' "$REPOS_FILE" | while read -r repo; do
-            local target_dir="${PROJECTS_DIR}/${repo}"
-            if [ -d "$target_dir/.git" ]; then
-                cd "$target_dir"
-                local branch=$(git branch --show-current)
-                local changes=$(git status --porcelain | wc -l)
-                local unpushed=$(git log origin/$branch..HEAD --oneline 2>/dev/null | wc -l)
+    if ! command -v jq &> /dev/null; then
+        echo "  Install jq for status: apt-get install jq"
+        return
+    fi
+
+    jq -r '.registry | keys[]' "$REPOS_FILE" | while read -r repo; do
+        local target_dir="${PROJECTS_DIR}/${repo}"
+        if [ -d "$target_dir/.git" ]; then
+            if [ "$FAST_STATUS" = "true" ]; then
+                local branch
+                branch=$(git -C "$target_dir" branch --show-current 2>/dev/null || echo "unknown")
+                echo -e "  ${GREEN}✅ ${repo} [${branch}]${NC}"
+            else
+                local branch changes unpushed
+                branch=$(git -C "$target_dir" branch --show-current 2>/dev/null || echo "unknown")
+                changes=$(git -C "$target_dir" status --porcelain 2>/dev/null | wc -l)
+                unpushed=$(git -C "$target_dir" log "origin/${branch}..HEAD" --oneline 2>/dev/null | wc -l)
                 
                 if [ "$changes" -gt 0 ]; then
                     echo -e "  ${YELLOW}⚠️  ${repo} [${branch}] - ${changes} uncommitted changes${NC}"
@@ -112,13 +153,11 @@ show_status() {
                 else
                     echo -e "  ${GREEN}✅ ${repo} [${branch}] - clean${NC}"
                 fi
-            else
-                echo -e "  ${RED}❌ ${repo} - not cloned${NC}"
             fi
-        done
-    else
-        echo "  Install jq for status: apt-get install jq"
-    fi
+        else
+            echo -e "  ${RED}❌ ${repo} - not cloned${NC}"
+        fi
+    done
     echo ""
 }
 

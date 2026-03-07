@@ -5,7 +5,9 @@ Common issues and solutions when working in the Cockpit Codespace.
 ## 📋 Recent Improvements
 
 The Cockpit Codespace has been enhanced with the following improvements:
-- **Pinned Emscripten 3.1.50**: Reproducible builds with a stable version
+- **Tip‑of‑tree Emscripten (tot)**: the setup script now installs the latest
+  tot build by default, giving access to cutting‑edge features such as
+  experimental WebGPU support. Releases can still be pinned manually if needed.
 - **8GB Memory**: Increased from 4GB for better WebGPU/WASM performance
 - **Stable Features**: Pinned devcontainer feature versions for consistency
 - **Vite Support**: Port 5173 forwarded by default
@@ -27,7 +29,9 @@ To verify (should show version 3.1.50):
 emcc --version
 ```
 
-**Note**: The environment now uses a pinned Emscripten version (3.1.50) for reproducible builds.
+**Note**: The environment now installs the tip‑of‑tree (tot) build by default,
+which may change over time. If you require a stable release for CI or release
+artifacts, specify the version explicitly or install a specific tag.
 
 ### WebGPU Not Available
 **Symptom**: `navigator.gpu is undefined` or WebGPU errors

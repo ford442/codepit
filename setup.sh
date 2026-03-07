@@ -202,15 +202,19 @@ initial_setup() {
     mkdir -p "${PROJECTS_DIR}"
     
     # Install Emscripten if not already installed
+    # The default configuration uses the tip‑of‑tree ("tot") build instead of a
+    # pinned stable release.  This keeps the SDK up‑to‑date with the latest
+    # WebGPU/wasm features and mirrors our development environment.
     if [ ! -d "/opt/emsdk" ]; then
-        echo -e "${BLUE}📦 Installing Emscripten SDK...${NC}"
+        echo -e "${BLUE}📦 Installing Emscripten SDK (tot) ...${NC}"
         sudo mkdir -p /opt/emsdk
         sudo chown -R $(whoami):$(id -gn) /opt/emsdk
         cd /opt/emsdk
         git clone --depth 1 https://github.com/emscripten-core/emsdk.git .
-        ./emsdk install latest
-        ./emsdk activate latest
-        echo -e "${GREEN}✅ Emscripten SDK installed${NC}"
+        # install and activate the TIP‑OF‑TREE build by default
+        ./emsdk install tot
+        ./emsdk activate tot
+        echo -e "${GREEN}✅ Emscripten SDK (tot) installed${NC}"
     else
         echo -e "${GREEN}✅ Emscripten SDK already installed${NC}"
     fi

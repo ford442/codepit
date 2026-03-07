@@ -63,9 +63,11 @@ jobs:
         
       # Setup Emscripten (matching web_sequencer workflow version)
       - name: Setup Emscripten
+        # use tip-of-tree build by default; this keeps CI aligned with the
+        # local development environment that now installs `tot`.
         uses: mymindstorm/setup-emsdk@v14
         with:
-          version: '3.1.70'  # Matches web_sequencer workflow
+          version: 'tot'
           no-cache: true
           
       - name: Verify Emscripten

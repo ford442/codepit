@@ -105,7 +105,7 @@ Quick reference for daily development in the Cockpit Codespace.
 
 ### Emscripten (C/C++)
 ```bash
-# Activate Emscripten environment
+# Activate Emscripten environment (tot build installed by default)
 source /opt/emsdk/emsdk_env.sh
 
 # Basic build
